@@ -1,0 +1,36 @@
+﻿<html>
+<head>
+    <title>Test layout</title>
+    <link rel="stylesheet" type="text/css" href="../wwwroot/css/site.css" />
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+                <h1>
+                    Blog
+                </h1>
+        </header>
+        
+        <nav class="sidebar">
+            <ul>
+                <li>
+                    <NavLink href="" Match="NavLinkMatch.All">
+                        Home
+                    </NavLink>
+                </li>
+                <li>
+                    <NavLink href="Page" Match="NavLinkMatch.Prefix">
+                        Page
+                    </NavLink>
+                </li>
+            </ul>
+        </nav>
+
+        <section class="main">
+            @Body
+        </section>
+        <footer class="footer">footer</footer>
+    </div>
+</body>
+</html>

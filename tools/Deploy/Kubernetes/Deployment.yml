@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: health-api-deployment
+  labels:
+    app: health-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: health-api
+  template:
+    metadata:
+      labels:
+        app: health-api
+    spec:
+      containers:
+      - name: health-api
+        image: sigsysblogregistryprd.azurecr.io/bl0g.clusterhealth.webapi
+        ports:
+        - containerPort: 80

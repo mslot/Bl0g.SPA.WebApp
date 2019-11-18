@@ -1,0 +1,29 @@
+﻿@inherits LayoutComponentBase
+
+<div class="container">
+    <header class="header">
+        <h1>
+            Blog
+        </h1>
+    </header>
+
+    <nav class="sidebar">
+        <ul>
+            <li>
+                <NavLink href="" Match="NavLinkMatch.All">
+                    Home
+                </NavLink>
+            </li>
+            <li>
+                <NavLink href="Page" Match="NavLinkMatch.Prefix">
+                    Page
+                </NavLink>
+            </li>
+        </ul>
+    </nav>
+
+    <section class="main">
+        @Body
+    </section>
+    <footer class="footer">footer</footer>
+</div>

@@ -1,0 +1,134 @@
+stages:
+- stage: Build
+  variables:
+  - group: Bl0g.Infrastructure.Build
+  jobs:
+  - job: BuildJob
+    pool:
+        vmImage: 'ubuntu-latest'
+    steps:
+
+    - task: Docker@2
+      inputs:
+        containerRegistry: 'docker-registry-prd-connection'
+        repository: 'bl0g.clusterhealth.webapi'
+        command: 'buildAndPush'
+        Dockerfile: '**/Dockerfile'
+        buildContext: '$(Build.Repository.LocalPath)/src/Bl0g.ClusterHealth.WebApi'
+        tags: |
+          $(Build.BuildId)
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        artifactName: 'bl0g.clusterhealth.webapi.manifests'
+        path: '$(Build.Repository.LocalPath)/tools/Deploy/Kubernetes'
+
+- stage: DeployDevelopment
+  variables:
+  - group: Bl0g.ClusterHealth.Development
+  displayName: Deploy development
+  dependsOn: Build
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy job
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: 'blog-development-environment'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifactName: 'bl0g.clusterhealth.webapi.manifests'
+              downloadPath: '$(System.ArtifactsDirectory)/manifests'
+
+          - task: KubernetesManifest@0
+            displayName: Create imagePullSecret
+            inputs:
+              action: 'createSecret'
+              kubernetesServiceConnection: 'blog-aks-connection'
+              namespace: 'development'
+              secretType: 'dockerRegistry'
+              secretName: 'blog'
+              dockerRegistryEndpoint: 'docker-registry-prd-connection'
+          - task: "A8515EC8-7254-4FFD-912C-86772E2B5962@3"
+            inputs:
+              rootDirectory: '$(System.ArtifactsDirectory)/manifests/'
+              targetFiles: '**/*.yml'
+              encoding: 'auto'
+              writeBOM: true
+              verbosity: 'detailed'
+              actionOnMissing: 'warn'
+              keepToken: false
+              tokenPrefix: '{{'
+              tokenSuffix: '}}'
+          - task: KubernetesManifest@0
+            displayName: Deploy to Kubernetes cluster
+            inputs:
+              action: 'deploy'
+              kubernetesServiceConnection: 'blog-aks-connection'
+              namespace: 'development'
+              manifests: |
+                $(System.ArtifactsDirectory)/manifests/Namespace.yml
+                $(System.ArtifactsDirectory)/manifests/Deployment.yml
+                $(System.ArtifactsDirectory)/manifests/Service.yml
+                $(System.ArtifactsDirectory)/manifests/Ingress.yml
+              containers: 'sigsysblogregistryprd.azurecr.io/bl0g.clusterhealth.webapi:$(Build.BuildId)'
+              imagePullSecrets: 'blog'
+
+- stage: DeployStaging
+  variables:
+  - group: Bl0g.ClusterHealth.Staging
+  displayName: Deploy staging
+  dependsOn:
+  - Build
+  - DeployDevelopment
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy job
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: 'blog-staging-environment'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifactName: 'bl0g.clusterhealth.webapi.manifests'
+              downloadPath: '$(System.ArtifactsDirectory)/manifests'
+
+          - task: KubernetesManifest@0
+            displayName: Create imagePullSecret
+            inputs:
+              action: 'createSecret'
+              kubernetesServiceConnection: 'blog-aks-connection'
+              namespace: 'staging'
+              secretType: 'dockerRegistry'
+              secretName: 'blog'
+              dockerRegistryEndpoint: 'docker-registry-prd-connection'
+          - task: "A8515EC8-7254-4FFD-912C-86772E2B5962@3"
+            inputs:
+              rootDirectory: '$(System.ArtifactsDirectory)/manifests/'
+              targetFiles: '**/*.yml'
+              encoding: 'auto'
+              writeBOM: true
+              verbosity: 'detailed'
+              actionOnMissing: 'warn'
+              keepToken: false
+              tokenPrefix: '{{'
+              tokenSuffix: '}}'
+          - task: KubernetesManifest@0
+            displayName: Deploy to Kubernetes cluster
+            inputs:
+              action: 'deploy'
+              kubernetesServiceConnection: 'blog-aks-connection'
+              namespace: 'staging'
+              manifests: |
+                $(System.ArtifactsDirectory)/manifests/Namespace.yml
+                $(System.ArtifactsDirectory)/manifests/Deployment.yml
+                $(System.ArtifactsDirectory)/manifests/Service.yml
+                $(System.ArtifactsDirectory)/manifests/Ingress.yml
+              containers: 'sigsysblogregistryprd.azurecr.io/bl0g.clusterhealth.webapi:$(Build.BuildId)'
+              imagePullSecrets: 'blog'
